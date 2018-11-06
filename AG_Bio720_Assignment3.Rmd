@@ -1,0 +1,145 @@
+---
+title: "AG_Bio720_Assignment3_R"
+author: "Amelia Guo"
+date: '2018-11-05'
+output: html_document
+---
+
+#Question 2:
+```{r}
+#importing the data file
+rna_counts <- read.csv("~/Documents/Biology720/eXpress_dm_counts.csv", stringsAsFactors = FALSE)
+#changing column X to become the rownames, then removing that column, and adding 0.01 to every data value 
+row.names(rna_counts) <- rna_counts[[1]]
+rna_counts <- rna_counts[-c(1)]
+rna_counts <- rna_counts + 0.01 
+#We cannot log transform counts that are 0; to fix this, we can add 0.01 to every value. It is a small enough number that won't alter the data too much, plus we are adding it to all values so it is a global change that can be largely ignored. 
+
+#funtion written for finding the mean with the option to log2 transform 
+calc_mean <- function(x, log2TF = FALSE) {
+  if (log2TF == TRUE) {
+    x <- log2(x)
+  } 
+  mean(x, na.rm = TRUE)
+}
+
+#taking the mean of raw data values from desired columns
+calc_mean(rna_counts[[1]])
+calc_mean(rna_counts[[3]])
+calc_mean(rna_counts[[10]])
+
+#taking the mean of log2 transformed values from desired columns 
+calc_mean(rna_counts[[1]], log2 = TRUE)
+calc_mean(rna_counts[[3]], log2 = TRUE)
+calc_mean(rna_counts[[10]], log2 = TRUE)
+``` 
+
+
+
+#Question 3: 
+```{r}
+#creating a matrix for the output beforehand with the corresponding column names 
+mean_percol <- (matrix(nrow=1, ncol=55))
+colnames(mean_percol) <- colnames(rna_counts)
+
+#for loop to go through each column and find the mean with the function from question 2, then print the output
+for (i in 1:ncol(rna_counts)) {
+  mean_percol[,i] <- calc_mean(rna_counts[[i]], log2TF = TRUE)
+  i <- i + 1
+}
+print(mean_percol)
+
+#this sorts the values in descending order and prints out the column names 
+sort_mean <- sort(mean_percol, decreasing = TRUE, index.return = TRUE)
+mean_percol[,sort_mean$ix]
+```
+In the top 5 ranking individuals, there is an enrichment for the female sex (4/5), and a slight enrichment for the head horn samples (2/5) 
+
+
+
+#Question 4: 
+```{r}
+#use the apply function instead of the above for loop
+system.time(apply(rna_counts, 2, calc_mean, log2TF = TRUE))
+
+system.time(for (i in 1:ncol(rna_counts)) {
+  mean_percol[,i] <- calc_mean(rna_counts[[i]], log2TF = TRUE)
+  i <- i + 1
+})
+```
+The apply function is slightly faster than the for loop here, and would be even faster if I didn't pre-allocate memory for the for loop output. 
+
+
+
+#Question 5: 
+```{r}
+rna_counts <- read.csv("~/Documents/Biology720/eXpress_dm_counts.csv", stringsAsFactors = FALSE)
+row.names(rna_counts) <- rna_counts[[1]]
+rna_counts <- rna_counts[-c(1)]
+rna_counts <- rna_counts + 0.01 
+
+rna_counts <- log2(rna_counts)
+rna_counts_colmeans <- colMeans(rna_counts)
+rna_counts_colmeans
+```
+
+
+
+#Question 6: 
+```{r}
+rna_counts <- read.csv("~/Documents/Biology720/eXpress_dm_counts.csv", stringsAsFactors = FALSE)
+row.names(rna_counts) <- rna_counts[[1]]
+rna_counts <- rna_counts[-c(1)]
+rna_counts <- rna_counts + 0.01 
+
+#using the approach from Q5, we can sub in the function rowMeans instead of colMeans
+rna_counts <- log2(rna_counts)
+rna_counts_rowmeans <- rowMeans(rna_counts)
+head(rna_counts_rowmeans)
+```
+
+
+
+#Question 7: 
+```{r}
+rna_counts <- read.csv("~/Documents/Biology720/eXpress_dm_counts.csv", stringsAsFactors = FALSE)
+row.names(rna_counts) <- rna_counts[[1]]
+rna_counts <- rna_counts[-c(1)]
+rna_counts <- rna_counts + 0.01
+
+#subset all columns with large and small male headhorn samples 
+male_hdhorn <- rna_counts[,grep("_male_hdhorn", colnames(rna_counts))]
+#calculate the means for this subset
+male_hdhorn_rowmeans <- rowMeans(male_hdhorn)
+male_hdhorn_log2 <- log2(male_hdhorn)
+male_hdhornlog2_rowmeans <- rowMeans(male_hdhorn_log2)
+head(male_hdhornlog2_rowmeans)
+
+#mean expression among large males with headhorn samples 
+lg_male_hdhorn <- rna_counts[,grep("lg_male_hdhorn", colnames(rna_counts))]
+lg_male_hdhorn_rowmeans <- rowMeans(lg_male_hdhorn)
+lg_male_hdhorn_log2 <- log2(lg_male_hdhorn)
+lg_male_hdhornlog2_rowmeans <- rowMeans(lg_male_hdhorn_log2)
+head(lg_male_hdhornlog2_rowmeans)
+
+#mean expression among large males with headhorn samples 
+sm_male_hdhorn <- rna_counts[,grep("sm_male_hdhorn", colnames(rna_counts))]
+sm_male_hdhorn_rowmeans <- rowMeans(sm_male_hdhorn)
+sm_male_hdhorn_log2 <- log2(sm_male_hdhorn)
+sm_male_hdhornlog2_rowmeans <- rowMeans(sm_male_hdhorn_log2)
+head(sm_male_hdhornlog2_rowmeans)
+
+#mean difference between large and small male hdhorn samples on a gene by gene basis 
+mean_diff <- lg_male_hdhorn_rowmeans - sm_male_hdhorn_rowmeans
+mean_diff_log2 <- lg_male_hdhornlog2_rowmeans - sm_male_hdhornlog2_rowmeans
+```
+
+
+
+#Question 8: 
+```{r}
+#log2 transformed data 
+plot(x = male_hdhorn_rowmeans, y = mean_diff)
+plot(x = male_hdhornlog2_rowmeans, y = mean_diff_log2)
+```
+
