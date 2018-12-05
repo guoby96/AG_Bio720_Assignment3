@@ -1,0 +1,144 @@
+---
+title: "AG_Bio720_Dec5_Assignment"
+author: "Amelia Guo"
+date: '2018-12-05'
+output:
+  html_document: default
+  pdf_document: default
+---
+#Question 1: 
+DataCamp chapters on "Introduction to Bioconductor" have been completed.
+
+#Question 2: 
+This is the simulator I have written for diploids. In this function, I have placed in arguments that allows us to try different initial allele frequencies (p0), fitness of each genotype (wAA, wAa, waa), and number of generations (n).
+
+The followig function can report whether the beneficial allele fixes by the end of the simulation. 
+```{r echo=TRUE}
+diploid_selection <- function(p0 = 0.01, wAA = 1, wAa = 0.9, waa = 0.3, n = 100) {
+    
+    # Initialize vectors to store allele frequencies and mean pop fitness
+    p <- rep(NA,n)  # a vector to store allele frequencies
+    
+    w_bar <- rep(NA, n)
+     
+    # starting conditions
+   	p[1] <- p0 # starting allele frequencies
+	  w_bar[1] <- (p[1]^2*wAA) + (2*p[1]*(1-p[1])*wAa) + ((1-p[1])^2*waa)
+	
+	# now we need to loop from generation to generation
+	for ( i in 2:n) {
+		w_bar[i - 1] <- (p[i - 1]^2*wAA) + (2*p[i - 1]*(1-p[i - 1])*wAa) + ((1-p[i - 1])^2*waa) # mean population fitness
+		p[i] <- (p[i - 1]^2*(wAA/w_bar[i - 1])) + (p[i - 1]*(1-p[i - 1])*(wAa/w_bar[i - 1]))
+	}
+    
+    return(p)
+}
+
+diploid_selection(p0 = 0.01, wAA = 1, wAa = 0.9, waa = 0.3, n = 100)
+
+```
+
+
+The follwing can plot the trajectory of the beneficial allel across generations. 
+```{r echo=TRUE}
+d <- diploid_selection()
+generations <- 1:length(d)
+plot(d ~ generations, pch = 20, 
+     ylab = "allele frequency", 
+     xlab = "generation")
+```
+
+
+#Question 3: 
+The following function is my genetic drift simulator, with the arguments including the number of alleles (size), the starting allele frequency (p0a and p0A), and the number of generations (n). 
+
+```{r}
+
+genetic_drift <- function(pop = 40, p0a = 0.5, p0A = 0.5, n = 100) {
+
+allele_counts <- sample(c("a", "A"),
+                        size = pop, 
+                        replace = TRUE,
+                        prob = c(p0a,p0A))
+allele_freq <- table(allele_counts)/length(allele_counts)
+
+for (i in 2:n) {
+  
+  if( i == 1){
+    c <- sample(c("a", "A"),
+                        size = pop, 
+                        replace = TRUE,
+                        prob = allele_freq)
+    f <- table(allele_counts)/length(allele_counts)
+    
+    allele_counts<-rbind(allele_counts,c)
+    allele_freq<-rbind(allele_freq,f)
+  } else {
+     c <- sample(c("a", "A"),
+                        size = pop, 
+                        replace = TRUE,
+                        prob = allele_freq[i,])
+    f <- table(allele_counts[i,])/length(allele_counts[i,])
+    
+    allele_counts<-rbind(allele_counts,c)
+    allele_freq<-rbind(allele_freq,f)
+  }
+
+
+  }
+}
+```
+
+#Question 4: 
+```{r}
+sim <- replicate(n = 1000, genetic_drift(n = 100, p0a = 0.5, p0A = 0.5, pop = 400))
+```
+
+#Question 5:
+```{r}
+plot(frequency ~ generations, pch = 20, cex = 1.5)
+matlines(x = generations[,1], y = frequency()[,1:100], lwd=c(3,3,3), lty=c(1,2,2), col = 1)
+```
+
+#Question 6: 
+Re-wrote this as a function: 
+```{r echo=TRUE}
+stat <- function(obs = 20, intercept = 0.5, slope = 0.1, error = 0) {
+x <- seq(from = 1, to = 10, length.out = obs) # length.out is how many observations we will have 
+a <- intercept # intercept
+b <- slope # slope
+y_deterministic <- a + b*x
+y_simulated <- rnorm(length(x), mean = y_deterministic, sd = 0)
+mod_sim <- lm(y_simulated ~ x)
+p_val_slope <- summary(mod_sim)$coef[2,4] # extracts the p-value p_val_slope
+p_val_slope 
+}
+```
+
+I know that this function works because if we change the sd error to 0, then we should get the same answer, which we do. 
+```{r echo=TRUE}
+x <- seq(from =1, to = 10, length.out = 20) # length.out is how many observations we will have 
+a <- 0.5 # intercept
+b <- 0.1 # slope
+y_deterministic <- a + b*x
+y_simulated <- rnorm(length(x), mean = y_deterministic, sd = 0)
+mod_sim <- lm(y_simulated ~ x)
+p_val_slope <- summary(mod_sim)$coef[2,4] # extracts the p-value p_val_slope
+p_val_slope
+```
+
+```{r echo=TRUE}
+rep <- replicate(n = 1000, stat(error = 20))
+
+hist(rep, freq = T, breaks = 20)
+```
+The histogram above shows me that the p value was less than 0.5 in approimately 50 out of 1000 times. 
+
+```{r echo=TRUE}
+rep2 <- replicate(n = 1000, stat(slope = 0, error = 20))
+
+hist(rep2, freq = T, breaks = 20)
+```
+This didn't change the frequence of p values less than 0.5 much. The frequencies is already 40-50 every time. 
+
+
